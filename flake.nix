@@ -16,6 +16,11 @@
     {
       herculesCI.ciSystems = [ "x86_64-linux" ];
       overlay = final: prev: {
+          final.nixVersions.unstable.package = final.nixVersions.unstable.overrideAttrs (o: {
+            patches = o.patches or [ ] ++ [
+              ./allow-pure-builtins-storePath.patch
+            ];
+          });
         nixinate = {
           nix = prev.pkgs.writeShellScriptBin "nix"
             ''${final.nixVersions.unstable}/bin/nix --experimental-features "nix-command flakes" "$@"'';

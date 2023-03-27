@@ -1,0 +1,18 @@
+diff --git a/src/libexpr/primops.cc b/src/libexpr/primops.cc
+index e4bad2fb8..6e2c0642a 100644
+--- a/src/libexpr/primops.cc
++++ b/src/libexpr/primops.cc
+@@ -1425,7 +1425,12 @@ static RegisterPrimOp primop_toPath({
+ static void prim_storePath(EvalState & state, const PosIdx pos, Value * * args, Value & v)
+ {
+     PathSet context;
+-    Path path = state.checkSourcePath(state.coerceToPath(pos, *args[0], context));
++    Path path = state.coerceToPath(pos, *args[0], context);
++    if (state.store->isStorePath(path))
++        state.allowPath(path);
++    else
++        path = state.checkSourcePath(path);
++
+     /* Resolve symlinks in ‘path’, unless ‘path’ itself is a symlink
+        directly in the store.  The latter condition is necessary so
+        e.g. nix-push does the right thing. */
