@@ -16,15 +16,17 @@
     {
       herculesCI.ciSystems = [ "x86_64-linux" ];
       overlay = final: prev: {
-          final.nixVersions.unstable.package = final.nixVersions.unstable.overrideAttrs (o: {
-            patches = o.patches or [ ] ++ [
-              ./allow-pure-builtins-storePath.patch
-            ];
-          });
+        nix = (builtins.getFlake "github:hercules-ci/nix/ce8bc8b37c01cfefd4fcc37b37271ad2af162b58").packages.${prev.hostPlatform.system}.nix;
+#        nixVersions = prev.nixVersions//{
+#            unstable.package = prev.nixVersions.unstable.overrideAttrs (o: {     
+#            patches = o.patches or [ ] ++ [
+#              ./allow-pure-builtins-storePath.patch
+#            ];
+#          });
+#        };
         nixinate = {
-          nix = prev.pkgs.writeShellScriptBin "nix"
-            ''${final.nixVersions.unstable}/bin/nix --experimental-features "nix-command flakes" "$@"'';
-          nixos-rebuild = prev.nixos-rebuild.override { inherit (final) nix; };
+          nix = (builtins.getFlake "github:hercules-ci/nix/ce8bc8b37c01cfefd4fcc37b37271ad2af162b58").${prev.hostPlatform.system}.nix;
+          nixos-rebuild = prev.nixos-rebuild.override { nix = final.nix; };
         };
         generateApps = flake:
           let
@@ -59,7 +61,7 @@
                 ( set -x; ${nix} ${nixOptions} copy ${flake} --to ssh://${user}@${host} )
               '' + (if hermetic then ''
                 echo "🤞 Activating configuration hermetically on ${machine} via ssh:"
-                ( set -x; ${nix} ${nixOptions} copy --derivation ${nixos-rebuild} ${flock} --to ssh://${user}@${host} )
+                ( set -x; ${nix} ${nixOptions} copy ${nixos-rebuild} ${flock} --to ssh://${user}@${host} )
                 ( set -x; ${openssh} -t ${user}@${host} "sudo nix-store --realise ${nixos-rebuild} ${flock} && sudo ${flock} -w 60 /dev/shm/nixinate-${machine} ${nixos-rebuild} ${nixOptions} ${switch} --flake ${flake}#${machine}" )
               '' else ''
                 echo "🤞 Activating configuration non-hermetically on ${machine} via ssh:"
